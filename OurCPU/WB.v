@@ -8,6 +8,7 @@ module WB(
     input wire [`MEM_TO_WB_WD-1:0] mem_to_wb_bus,
 
     output wire [`WB_TO_RF_WD-1:0] wb_to_rf_bus,
+    output wire [`WB_TO_ID_WD-1:0] wb_to_id_bus,    //data connect
 
     output wire [31:0] debug_wb_pc,
     output wire [3:0] debug_wb_rf_wen,
@@ -49,6 +50,11 @@ module WB(
         rf_waddr,
         rf_wdata
     };
+    assign wb_to_id_bus = {     //data connect
+        rf_we,
+        rf_waddr,
+        rf_wdata
+    };                          //data connect
 
     assign debug_wb_pc = wb_pc;
     assign debug_wb_rf_wen = {4{rf_we}};
