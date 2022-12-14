@@ -107,14 +107,14 @@ module ID(
     wire sel_rf_res;
     wire [2:0] sel_rf_dst;
 
-    wire [31:0] rdata1, rdata2, rfdata1, rfdata2;
+    wire [31:0] rdata1, rdata2, rf_data1, rf_data2;
 
     regfile u_regfile(
     	.clk    (clk    ),
         .raddr1 (rs ),
-        .rdata1 (rfdata1 ),
+        .rdata1 (rf_data1 ),
         .raddr2 (rt ),
-        .rdata2 (rfdata2 ),
+        .rdata2 (rf_data2 ),
         .we     (wb_rf_we     ),
         .waddr  (wb_rf_waddr  ),
         .wdata  (wb_rf_wdata  )
@@ -124,12 +124,12 @@ module ID(
                     ((rs == ex_id_waddr) && ex_id_we) ? ex_id_wdata :
                     ((rs == mem_id_waddr) && mem_id_we) ? mem_id_wdata :
                     ((rs == wb_id_waddr) && wb_id_we) ? wb_id_wdata :
-                    rfdata1;
+                    rf_data1;
     assign rdata2 = (rt == 5'b0) ? 32'b0 :
                     ((rt == ex_id_waddr) && ex_id_we) ? ex_id_wdata :
                     ((rt == mem_id_waddr) && mem_id_we) ? mem_id_wdata :
                     ((rt == wb_id_waddr) && wb_id_we) ? wb_id_wdata : 
-                    rfdata2;                                                 //forwording
+                    rf_data2;                                                 //forwording
 
     assign opcode = inst[31:26];
     assign rs = inst[25:21];
