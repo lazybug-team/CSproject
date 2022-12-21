@@ -9,10 +9,11 @@ module EX(
 
     output wire [`EX_TO_MEM_WD-1:0] ex_to_mem_bus,
     output wire [`EX_TO_ID_WD-1:0] ex_to_id_bus,    //data connect
-    output wire data_sram_en,
-    output wire [3:0] data_sram_wen,
+    output wire data_sram_en,                      //enable
+    output wire [3:0] data_sram_wen,               //select 4 bytes
     output wire [31:0] data_sram_addr,
-    output wire [31:0] data_sram_wdata
+    output wire [31:0] data_sram_wdata,
+    output wire loading
 );
 
     reg [`ID_TO_EX_WD-1:0] id_to_ex_bus_r;
@@ -32,6 +33,7 @@ module EX(
         end
     end
 
+    wire [14:0] sl_bus;
     wire [31:0] ex_pc, inst;
     wire [11:0] alu_op;
     wire [2:0] sel_alu_src1;
@@ -45,9 +47,10 @@ module EX(
     reg is_in_delayslot;
 
     assign {
-        ex_pc,          // 148:117
-        inst,           // 116:85
-        alu_op,         // 84:83
+        sl_bus,         // 172:159
+        ex_pc,          // 158:127
+        inst,           // 126:95
+        alu_op,         // 94:83
         sel_alu_src1,   // 82:80
         sel_alu_src2,   // 79:76
         data_ram_en,    // 75
@@ -58,6 +61,16 @@ module EX(
         rf_rdata1,         // 63:32
         rf_rdata2          // 31:0
     } = id_to_ex_bus_r;
+
+    wire inst_lw,inst_sw;
+    wire [11:0] other_inst;
+    assign {
+        inst_lw,
+        inst_sw,
+        other_inst
+    } = sl_bus;
+
+    assign loading = inst_lw ? 1'b1 : 1'b0;
 
     wire [31:0] imm_sign_extend, imm_zero_extend, sa_zero_extend;
     assign imm_sign_extend = {{16{inst[15]}},inst[15:0]};
@@ -84,6 +97,7 @@ module EX(
     assign ex_result = alu_result;
 
     assign ex_to_mem_bus = {
+        sl_bus,         // 89:76
         ex_pc,          // 75:44
         data_ram_en,    // 43
         data_ram_wen,   // 42:39
@@ -98,6 +112,16 @@ module EX(
         rf_waddr,       // 36:32
         ex_result       // 31:0
     };                              //data connect
+
+
+
+    //  RAM save and load
+    assign data_sram_en = data_ram_en;
+    assign data_sram_wen = data_ram_wen;
+    assign data_sram_addr = ex_result;
+    assign data_sram_wdata = data_sram_wen == 4'b1111 ? rf_rdata2
+                            :32'b0;
+
 
     // MUL part
     wire [63:0] mul_result;

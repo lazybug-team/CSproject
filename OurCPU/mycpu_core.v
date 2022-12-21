@@ -33,6 +33,9 @@ module mycpu_core(
     wire [`WB_TO_ID_WD-1:0] wb_to_id_bus;       //data connect
     wire [`StallBus-1:0] stall;
 
+    wire loading;
+    wire stallreq;
+
     IF u_IF(
     	.clk             (clk             ),
         .rst             (rst             ),
@@ -49,6 +52,7 @@ module mycpu_core(
     ID u_ID(
     	.clk             (clk             ),
         .rst             (rst             ),
+        .loading         (loading         ),
         .stall           (stall           ),
         .stallreq        (stallreq        ),
         .if_to_id_bus    (if_to_id_bus    ),
@@ -71,7 +75,8 @@ module mycpu_core(
         .data_sram_en    (data_sram_en    ),
         .data_sram_wen   (data_sram_wen   ),
         .data_sram_addr  (data_sram_addr  ),
-        .data_sram_wdata (data_sram_wdata )
+        .data_sram_wdata (data_sram_wdata ),
+        .loading         (loading)
     );
 
     MEM u_MEM(
@@ -99,6 +104,7 @@ module mycpu_core(
 
     CTRL u_CTRL(
     	.rst   (rst   ),
+        .stallreq (stallreq),
         .stall (stall )
     );
     
