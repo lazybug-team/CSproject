@@ -29,6 +29,7 @@ module MEM(
         end
     end
 
+    wire [13:0] sl_bus;
     wire [31:0] mem_pc;
     wire data_ram_en;
     wire [3:0] data_ram_wen;
@@ -40,6 +41,7 @@ module MEM(
     wire [31:0] mem_result;
 
     assign {
+        sl_bus,         // 89:76
         mem_pc,         // 75:44
         data_ram_en,    // 43
         data_ram_wen,   // 42:39
@@ -49,9 +51,20 @@ module MEM(
         ex_result       // 31:0
     } =  ex_to_mem_bus_r;
 
+    wire inst_lw,inst_sw;
+    wire [11:0] other_inst;
+    assign {
+        inst_lw,
+        inst_sw,
+        other_inst
+    } = sl_bus;
 
 
-    assign rf_wdata = sel_rf_res ? mem_result : ex_result;
+
+    // discard rel_rf_res and mem_result
+    // assign rf_wdata = sel_rf_res ? mem_result : ex_result;
+    assign rf_wdata = inst_lw ? data_sram_rdata
+                      :ex_result;
 
     assign mem_to_wb_bus = {
         mem_pc,     // 69:38
