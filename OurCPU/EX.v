@@ -13,8 +13,14 @@ module EX(
     output wire [3:0] data_sram_wen,               //select 4 bytes
     output wire [31:0] data_sram_addr,
     output wire [31:0] data_sram_wdata,
-    output wire loading
-);
+    output wire loading,
+
+    output wire [1:0] hilo_we,
+    output wire [31:0] hi_i,
+    output wire [31:0] lo_i,
+
+    output wire stallreq_for_ex
+); 
 
     reg [`ID_TO_EX_WD-1:0] id_to_ex_bus_r;
 
@@ -33,7 +39,8 @@ module EX(
         end
     end
 
-    wire [14:0] sl_bus;
+    wire [5:0] hilo_bus;
+    wire [13:0] sl_bus;
     wire [31:0] ex_pc, inst;
     wire [11:0] alu_op;
     wire [2:0] sel_alu_src1;
@@ -47,6 +54,7 @@ module EX(
     reg is_in_delayslot;
 
     assign {
+        hilo_bus,       // 178:173
         sl_bus,         // 172:159
         ex_pc,          // 158:127
         inst,           // 126:95
@@ -69,6 +77,18 @@ module EX(
         inst_sw,
         other_inst
     } = sl_bus;
+
+    wire inst_div, inst_divu;
+    wire inst_mult,inst_multu;
+    wire inst_mthi,inst_mtlo;
+    assign {
+        inst_div,
+        inst_divu,
+        inst_mult,
+        inst_multu,
+        inst_mthi,
+        inst_mtlo
+    } = hilo_bus;
 
     assign loading = inst_lw ? 1'b1 : 1'b0;
 
@@ -108,6 +128,9 @@ module EX(
     };
 
     assign ex_to_id_bus = {         //data connect
+        hilo_we,        // 103:102
+        hi_i,           // 101:70
+        lo_i,           // 69:38
         rf_we,          // 37
         rf_waddr,       // 36:32
         ex_result       // 31:0
@@ -126,19 +149,20 @@ module EX(
     // MUL part
     wire [63:0] mul_result;
     wire mul_signed; // 有符号乘法标记
+    assign mul_signed = inst_mult ? 1'b1 : 1'b0;
 
     mul u_mul(
     	.clk        (clk            ),
         .resetn     (~rst           ),
         .mul_signed (mul_signed     ),
-        .ina        (      ), // 乘法源操作数1
-        .inb        (      ), // 乘法源操作数2
+        .ina        (rf_rdata1      ), // 乘法源操作数1
+        .inb        (rf_rdata2      ), // 乘法源操作数2
         .result     (mul_result     ) // 乘法结果 64bit
     );
 
     // DIV part
     wire [63:0] div_result;
-    wire inst_div, inst_divu;
+    // wire inst_div, inst_divu;
     wire div_ready_i;
     reg stallreq_for_div;
     assign stallreq_for_ex = stallreq_for_div;
@@ -228,6 +252,21 @@ module EX(
     end
 
     // mul_result 和 div_result 可以直接使用
+
+    // hilo port
+    assign hilo_we = inst_multu | inst_mult | inst_div | inst_divu ? 2'b11 :
+                     inst_mthi ? 2'b10:
+                     inst_mtlo ? 2'b01:
+                     2'b00;
+
+    assign hi_i = (inst_div | inst_divu) ? div_result[63:32] :
+                  (inst_mult | inst_multu) ? mul_result[63:32] :
+                  (inst_mthi) ? rf_rdata1 :
+                  32'b0;
+    assign lo_i = (inst_div | inst_divu) ? div_result[31:0] :
+                  (inst_mult | inst_multu) ? mul_result[31:0] :
+                  (inst_mtlo) ? rf_rdata1 :
+                  32'b0;
     
     
 endmodule
