@@ -52,10 +52,19 @@ module MEM(
     } =  ex_to_mem_bus_r;
 
     wire inst_lw,inst_sw;
-    wire [11:0] other_inst;
+    wire inst_lb,inst_lbu;
+    wire inst_lh,inst_lhu;
+    wire inst_sb,inst_sh;
+    wire [5:0] other_inst;
     assign {
         inst_lw,
         inst_sw,
+        inst_lb,
+        inst_lbu,
+        inst_lh,
+        inst_lhu,
+        inst_sb,
+        inst_sh,
         other_inst
     } = sl_bus;
 
@@ -63,8 +72,20 @@ module MEM(
 
     // discard rel_rf_res and mem_result
     // assign rf_wdata = sel_rf_res ? mem_result : ex_result;
-    assign rf_wdata = inst_lw ? data_sram_rdata
-                      :ex_result;
+    assign rf_wdata = inst_lw ? data_sram_rdata :
+                      (inst_lb & ex_result[1:0] == 2'b00) ? {{24{data_sram_rdata[7]}},data_sram_rdata[7:0]} :
+                      (inst_lb & ex_result[1:0] == 2'b01) ? {{24{data_sram_rdata[15]}},data_sram_rdata[15:8]} :
+                      (inst_lb & ex_result[1:0] == 2'b10) ? {{24{data_sram_rdata[23]}},data_sram_rdata[23:16]} :
+                      (inst_lb & ex_result[1:0] == 2'b11) ? {{24{data_sram_rdata[31]}},data_sram_rdata[31:24]} :
+                      (inst_lbu & ex_result[1:0] == 2'b00) ? {{24'b0},data_sram_rdata[7:0]} :
+                      (inst_lbu & ex_result[1:0] == 2'b01) ? {{24'b0},data_sram_rdata[15:8]} :
+                      (inst_lbu & ex_result[1:0] == 2'b10) ? {{24'b0},data_sram_rdata[23:16]} :
+                      (inst_lbu & ex_result[1:0] == 2'b11) ? {{24'b0},data_sram_rdata[31:24]} :
+                      (inst_lh & ex_result[1:0] == 2'b00) ? {{16{data_sram_rdata[15]}},data_sram_rdata[15:0]} :
+                      (inst_lh & ex_result[1:0] == 2'b10) ? {{16{data_sram_rdata[31]}},data_sram_rdata[31:16]} :
+                      (inst_lhu & ex_result[1:0] == 2'b00) ? {{16'b0},data_sram_rdata[15:0]} :
+                      (inst_lhu & ex_result[1:0] == 2'b10) ? {{16'b0},data_sram_rdata[31:16]} :                                                                                
+                      ex_result;
 
     assign mem_to_wb_bus = {
         mem_pc,     // 69:38

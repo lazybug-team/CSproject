@@ -71,10 +71,19 @@ module EX(
     } = id_to_ex_bus_r;
 
     wire inst_lw,inst_sw;
-    wire [11:0] other_inst;
+    wire inst_lb,inst_lbu;
+    wire inst_lh,inst_lhu;
+    wire inst_sb,inst_sh;
+    wire [5:0] other_inst;
     assign {
         inst_lw,
         inst_sw,
+        inst_lb,
+        inst_lbu,
+        inst_lh,
+        inst_lhu,
+        inst_sb,
+        inst_sh,
         other_inst
     } = sl_bus;
 
@@ -140,10 +149,22 @@ module EX(
 
     //  RAM save and load
     assign data_sram_en = data_ram_en;
-    assign data_sram_wen = data_ram_wen;
+    assign data_sram_wen = (inst_sb & ex_result[1:0] == 2'b00) ? 4'b0001 :
+                           (inst_sb & ex_result[1:0] == 2'b01) ? 4'b0010 :
+                           (inst_sb & ex_result[1:0] == 2'b10) ? 4'b0100 :
+                           (inst_sb & ex_result[1:0] == 2'b11) ? 4'b1000 :
+                           (inst_sh & ex_result[1:0] == 2'b00) ? 4'b0011 :  
+                           (inst_sh & ex_result[1:0] == 2'b10) ? 4'b1100 :                         
+                            data_ram_wen;
     assign data_sram_addr = ex_result;
-    assign data_sram_wdata = data_sram_wen == 4'b1111 ? rf_rdata2
-                            :32'b0;
+    assign data_sram_wdata = data_sram_wen == 4'b1111 ? rf_rdata2 :
+                             data_sram_wen == 4'b0001 ? {24'b0,rf_rdata2[7:0]} :
+                             data_sram_wen == 4'b0010 ? {16'b0,rf_rdata2[7:0],8'b0} : 
+                             data_sram_wen == 4'b0100 ? {8'b0,rf_rdata2[7:0],16'b0} :
+                             data_sram_wen == 4'b1000 ? {rf_rdata2[7:0],24'b0} :
+                             data_sram_wen == 4'b0011 ? {16'b0,rf_rdata2[15:0]} :
+                             data_sram_wen == 4'b1100 ? {rf_rdata2[15:0],16'b0} :
+                             32'b0;
 
 
     // MUL part
